@@ -230,24 +230,6 @@ class ObjectsController extends ResourcesController
         $id = $this->Objects->getId($id);
         $available = $this->getAvailableUrl($relationship);
 
-        if ($association instanceof RelatedTo) {
-            // Load list of object types that may reside on the other side of the considered relation.
-            $relations = $this->objectType->getRelations('both');
-            $relation = $relations[$relationship];
-            $objectTypes = $relation->right_object_types;
-            if ($relationship === $relation->inverse_name) {
-                $objectTypes = $relation->left_object_types;
-            }
-
-            if (count($objectTypes) === 1) {
-                // If only one object type may be on the other side, setup relations as if that object type was being accessed directly.
-                $association->getTarget()->behaviors()->call('setupRelations', $objectTypes);
-                $secondLevelRelations = $this->Objects->ObjectTypes->get($objectTypes[0]->id)->getRelations('both');
-                $this->setConfig('allowedAssociations', array_fill_keys(array_keys($secondLevelRelations), []), false);
-            }
-        }
-        $contain = $this->prepareInclude($this->request->getQuery('include'), $association->getTarget());
-
         $action = new GetObjectAction(['table' => $this->Table, 'objectType' => $this->objectType]);
         $entity = $action([
             'primaryKey' => $id,
@@ -308,6 +290,24 @@ class ObjectsController extends ResourcesController
 
         $association = $this->findAssociation($relationship);
         $filter = (array)$this->request->getQuery('filter') + array_filter(['query' => $this->request->getQuery('q')]);
+
+        if ($association instanceof RelatedTo) {
+            // Load list of object types that may reside on the other side of the considered relation.
+            $relations = $this->objectType->getRelations('both');
+            $relation = $relations[$relationship];
+            $objectTypes = $relation->right_object_types;
+            if ($relationship === $relation->inverse_name) {
+                $objectTypes = $relation->left_object_types;
+            }
+
+            if (count($objectTypes) === 1) {
+                // If only one object type may be on the other side, setup relations as if that object type was being accessed directly.
+                $objectType = $this->Objects->ObjectTypes->get($objectTypes[0]->id);
+                $association->getTarget()->behaviors()->call('setupRelations', [$objectType]);
+                $secondLevelRelations = $objectType->getRelations('both');
+                $this->setConfig('allowedAssociations', array_fill_keys(array_keys($secondLevelRelations), []), false);
+            }
+        }
         $contain = $this->prepareInclude($this->request->getQuery('include'), $association->getTarget());
         $lang = $this->request->getQuery('lang');
 
@@ -322,8 +322,8 @@ class ObjectsController extends ResourcesController
         $this->set(compact('objects'));
         $this->set('_serialize', ['objects']);
 
-        $available = $this->getAvailableUrl($relationship);
-        $this->set('_links', compact('available'));
+        // $available = $this->getAvailableUrl($relationship);
+        // $this->set('_links', compact('available'));
     }
 
     /**
