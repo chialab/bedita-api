@@ -308,7 +308,7 @@ class ObjectsController extends ResourcesController
 
         $association = $this->findAssociation($relationship);
         $filter = (array)$this->request->getQuery('filter') + array_filter(['query' => $this->request->getQuery('q')]);
-        $contain = $this->prepareInclude($this->request->getQuery('include'));
+        $contain = $this->prepareInclude($this->request->getQuery('include'), $association->getTarget());
         $lang = $this->request->getQuery('lang');
 
         $action = $this->getAssociatedAction($association);
